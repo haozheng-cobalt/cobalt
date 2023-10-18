@@ -20,7 +20,7 @@
     // { "name": "help" },
     { "name": "layers" },
     { "name": "layer_viewer" },
-    // { "name": "network" },
+    { "name": "network" },
     { "name": "performance_monitor" },
     { "name": "resources" },
     // { "name": "security" },

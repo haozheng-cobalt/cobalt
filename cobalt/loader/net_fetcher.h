@@ -56,7 +56,7 @@ class NetFetcher : public Fetcher,
 
   NetFetcher(const GURL& url, bool main_resource,
              const csp::SecurityCallback& security_callback, Handler* handler,
-             const network::NetworkModule* network_module,
+             network::NetworkModule* network_module,
              const Options& options, RequestMode request_mode,
              const Origin& origin);
   ~NetFetcher() override;
@@ -135,6 +135,8 @@ class NetFetcher : public Fetcher,
   starboard::atomic_bool will_destroy_current_message_loop_;
   bool main_resource_;
 
+  network::NetworkModule::UrlFetchCallbacks* url_fetch_callbacks_;
+  
   DISALLOW_COPY_AND_ASSIGN(NetFetcher);
 };
 

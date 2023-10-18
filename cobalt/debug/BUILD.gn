@@ -36,6 +36,8 @@ static_library("debug") {
     "backend/dom_agent.h",
     "backend/log_agent.cc",
     "backend/log_agent.h",
+    "backend/network_agent.cc",
+    "backend/network_agent.h",
     "backend/overlay_agent.cc",
     "backend/overlay_agent.h",
     "backend/page_agent.cc",

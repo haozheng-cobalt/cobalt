@@ -45,6 +45,10 @@ namespace base {
 class WaitableEvent;
 }  // namespace base
 
+namespace net {
+class URLFetcher;
+}
+
 namespace cobalt {
 namespace network {
 
@@ -142,7 +146,17 @@ class NetworkModule : public base::MessageLoop::DestructionObserver {
   // From base::MessageLoop::DestructionObserver.
   void WillDestroyCurrentMessageLoop() override;
 
+   // TODO: avoid the overhead when no debugger is attached.
+  // Maybe this type and object shouldn't live here.
+  struct UrlFetchCallbacks {
+    // Maybe this should allow multiple debuggers.
+    using Start = base::Callback<void(net::URLFetcher*)>;
+    Start start;
+  };
+  UrlFetchCallbacks* get_url_fetch_callbacks() { return &url_fetch_callbacks_; }
+
  private:
+  UrlFetchCallbacks url_fetch_callbacks_;
   void Initialize(const std::string& user_agent_string,
                   base::EventDispatcher* event_dispatcher);
   void OnCreate(base::WaitableEvent* creation_event);

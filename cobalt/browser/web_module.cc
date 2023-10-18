@@ -730,7 +730,8 @@ WebModule::Impl::Impl(web::Context* web_context, const ConstructionData& data)
     debug_module_.reset(new debug::backend::DebugModule(
         &debugger_hooks_, web_context_->global_environment(),
         debug_overlay_.get(), resource_provider_, window_,
-        data.options.debugger_state));
+        data.options.debugger_state,
+        web_context_->network_module()->get_url_fetch_callbacks()));
   }
 #endif  // ENABLE_DEBUGGER
 

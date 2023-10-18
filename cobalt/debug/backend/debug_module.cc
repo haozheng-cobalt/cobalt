@@ -23,11 +23,11 @@ namespace debug {
 namespace backend {
 
 namespace {
-constexpr char kCobaltAgent[] = "CobaltAgent";
 constexpr char kScriptDebuggerAgent[] = "ScriptDebuggerAgent";
 constexpr char kLogAgent[] = "LogAgent";
 constexpr char kDomAgent[] = "DomAgent";
 constexpr char kCssAgent[] = "CssAgent";
+constexpr char kNetworkAgent[] = "NetworkAgent";
 constexpr char kOverlayAgent[] = "OverlayAgent";
 constexpr char kPageAgent[] = "PageAgent";
 constexpr char kTracingAgent[] = "TracingAgent";
@@ -66,27 +66,28 @@ void StoreAgentState(base::DictionaryValue* state_dict,
 
 }  // namespace
 
-DebugModule::DebugModule(DebuggerHooksImpl* debugger_hooks,
-                         script::GlobalEnvironment* global_environment,
-                         RenderOverlay* render_overlay,
-                         render_tree::ResourceProvider* resource_provider,
-                         dom::Window* window, DebuggerState* debugger_state) {
-  ConstructionData data(debugger_hooks, global_environment,
-                        base::MessageLoop::current(), render_overlay,
-                        resource_provider, window, debugger_state);
-  Build(data);
-}
-
-DebugModule::DebugModule(DebuggerHooksImpl* debugger_hooks,
-                         script::GlobalEnvironment* global_environment,
-                         RenderOverlay* render_overlay,
-                         render_tree::ResourceProvider* resource_provider,
-                         dom::Window* window, DebuggerState* debugger_state,
-                         base::MessageLoop* message_loop) {
+DebugModule::DebugModule(
+    DebuggerHooksImpl* debugger_hooks,
+    script::GlobalEnvironment* global_environment,
+    RenderOverlay* render_overlay,
+    render_tree::ResourceProvider* resource_provider, dom::Window* window,
+    DebuggerState* debugger_state,
+    network::NetworkModule::UrlFetchCallbacks* url_fetch_callbacks,
+    base::MessageLoop* message_loop) {
   ConstructionData data(debugger_hooks, global_environment, message_loop,
                         render_overlay, resource_provider, window,
-                        debugger_state);
-  Build(data);
+                        debugger_state, url_fetch_callbacks);
+  DCHECK(data.message_loop);
+
+  if (base::MessageLoop::current() == data.message_loop) {
+    BuildInternal(data);
+  } else {
+    data.message_loop->task_runner()->PostBlockingTask(
+        FROM_HERE,
+        base::Bind(&DebugModule::BuildInternal, base::Unretained(this), data));
+  }
+
+  DCHECK(debug_dispatcher_);
 }
 
 DebugModule::~DebugModule() {
@@ -99,20 +100,6 @@ DebugModule::~DebugModule() {
   if (debug_backend_) {
     debug_backend_->UnbindAgents();
   }
-}
-
-void DebugModule::Build(const ConstructionData& data) {
-  DCHECK(data.message_loop);
-
-  if (base::MessageLoop::current() == data.message_loop) {
-    BuildInternal(data);
-  } else {
-    data.message_loop->task_runner()->PostBlockingTask(
-        FROM_HERE,
-        base::Bind(&DebugModule::BuildInternal, base::Unretained(this), data));
-  }
-
-  DCHECK(debug_dispatcher_);
 }
 
 void DebugModule::BuildInternal(const ConstructionData& data) {
@@ -141,7 +128,6 @@ void DebugModule::BuildInternal(const ConstructionData& data) {
   // directly handle one or more protocol domains.
   script_debugger_agent_.reset(
       new ScriptDebuggerAgent(debug_dispatcher_.get(), script_debugger_.get()));
-  cobalt_agent_.reset(new CobaltAgent(debug_dispatcher_.get()));
   log_agent_.reset(new LogAgent(debug_dispatcher_.get()));
   dom_agent_.reset(new DOMAgent(debug_dispatcher_.get()));
   css_agent_ = WrapRefCounted(new CSSAgent(debug_dispatcher_.get()));
@@ -163,6 +149,11 @@ void DebugModule::BuildInternal(const ConstructionData& data) {
   }
   tracing_agent_.reset(
       new TracingAgent(debug_dispatcher_.get(), script_debugger_.get()));
+  if (!script_debugger_agent_->IsSupportedDomain("Network")) {
+    DLOG(INFO) << "Network domain is supported";
+    network_agent_.reset(new NetworkAgent(debug_dispatcher_.get(), data.window,
+                                          data.url_fetch_callbacks));
+  }
 
   // Hook up hybrid agent JavaScript to the DebugBackend.
   debug_backend_->BindAgents(css_agent_);
@@ -180,7 +171,6 @@ void DebugModule::BuildInternal(const ConstructionData& data) {
   base::DictionaryValue* agents_state =
       data.debugger_state == nullptr ? nullptr
                                      : data.debugger_state->agents_state.get();
-  cobalt_agent_->Thaw(RemoveAgentState(kCobaltAgent, agents_state));
   script_debugger_agent_->Thaw(
       RemoveAgentState(kScriptDebuggerAgent, agents_state));
   log_agent_->Thaw(RemoveAgentState(kLogAgent, agents_state));
@@ -190,6 +180,9 @@ void DebugModule::BuildInternal(const ConstructionData& data) {
     overlay_agent_->Thaw(RemoveAgentState(kOverlayAgent, agents_state));
   if (page_agent_)
     page_agent_->Thaw(RemoveAgentState(kPageAgent, agents_state));
+  if (network_agent_) {
+    network_agent_->Thaw(RemoveAgentState(kNetworkAgent, agents_state));
+  }
   tracing_agent_->Thaw(RemoveAgentState(kTracingAgent, agents_state));
 
   is_frozen_ = false;
@@ -203,7 +196,6 @@ std::unique_ptr<DebuggerState> DebugModule::Freeze() {
 
   debugger_state->agents_state.reset(new base::DictionaryValue());
   base::DictionaryValue* agents_state = debugger_state->agents_state.get();
-  StoreAgentState(agents_state, kCobaltAgent, cobalt_agent_->Freeze());
   StoreAgentState(agents_state, kScriptDebuggerAgent,
                   script_debugger_agent_->Freeze());
   StoreAgentState(agents_state, kLogAgent, log_agent_->Freeze());
@@ -213,6 +205,9 @@ std::unique_ptr<DebuggerState> DebugModule::Freeze() {
     StoreAgentState(agents_state, kOverlayAgent, overlay_agent_->Freeze());
   if (page_agent_)
     StoreAgentState(agents_state, kPageAgent, page_agent_->Freeze());
+  if (network_agent_) {
+    StoreAgentState(agents_state, kNetworkAgent, network_agent_->Freeze());
+  }
   StoreAgentState(agents_state, kTracingAgent, tracing_agent_->Freeze());
 
   // Take the clients from the dispatcher last so they still get events that the

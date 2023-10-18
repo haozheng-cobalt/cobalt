@@ -42,6 +42,7 @@ AgentBase::AgentBase(const std::string& domain, const std::string& script_file,
 }
 
 void AgentBase::Thaw(JSONObject agent_state) {
+  LOG(INFO) << "AgentBase::Thaw " << domain_;
   dispatcher_->AddDomain(domain_, commands_.Bind());
   if (!agent_state) return;
 
@@ -52,6 +53,7 @@ void AgentBase::Thaw(JSONObject agent_state) {
 }
 
 JSONObject AgentBase::Freeze() {
+  LOG(INFO) << "AgentBase::Freeze " << domain_;
   dispatcher_->RemoveDomain(domain_);
 
   JSONObject agent_state(new base::DictionaryValue());
@@ -60,6 +62,7 @@ JSONObject AgentBase::Freeze() {
 }
 
 bool AgentBase::EnsureEnabled(Command* command) {
+  LOG(INFO) << "AgentBase::EnsureEnabled " << domain_;
   if (!enabled_) {
     command->SendErrorResponse(Command::kInvalidRequest,
                                domain_ + " not enabled");
@@ -68,6 +71,7 @@ bool AgentBase::EnsureEnabled(Command* command) {
 }
 
 bool AgentBase::DoEnable(Command* command) {
+  LOG(INFO) << "AgentBase::DoEnable " << domain_;
   if (enabled_) {
     command->SendErrorResponse(Command::kInvalidRequest,
                                domain_ + " already enabled");
@@ -84,6 +88,7 @@ bool AgentBase::DoEnable(Command* command) {
 }
 
 bool AgentBase::DoDisable(Command* command) {
+  LOG(INFO) << "AgentBase::DoDisable " << domain_;
   if (!EnsureEnabled(command)) return false;
   // TODO: Unload the script file
   enabled_ = false;

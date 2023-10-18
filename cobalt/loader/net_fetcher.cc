@@ -95,7 +95,7 @@ bool AllowMimeTypeAsScript(const std::string& mime_type) {
 NetFetcher::NetFetcher(const GURL& url, bool main_resource,
                        const csp::SecurityCallback& security_callback,
                        Handler* handler,
-                       const network::NetworkModule* network_module,
+                       network::NetworkModule* network_module,
                        const Options& options, RequestMode request_mode,
                        const Origin& origin)
     : Fetcher(handler),
@@ -110,6 +110,7 @@ NetFetcher::NetFetcher(const GURL& url, bool main_resource,
       skip_fetch_intercept_(options.skip_fetch_intercept),
       will_destroy_current_message_loop_(false),
       main_resource_(main_resource) {
+  url_fetch_callbacks_ = network_module->get_url_fetch_callbacks();
   url_fetcher_ = net::URLFetcher::Create(url, options.request_method, this);
   if (!options.headers.IsEmpty()) {
     url_fetcher_->SetExtraRequestHeaders(options.headers.ToString());
@@ -167,7 +168,9 @@ void NetFetcher::Start() {
         base::BindOnce(&NetFetcher::OnFetchIntercepted, AsWeakPtr()),
         base::BindOnce(&NetFetcher::ReportLoadTimingInfo, AsWeakPtr()),
         base::BindOnce(&NetFetcher::InterceptFallback, AsWeakPtr()));
-
+    if (url_fetch_callbacks_ && url_fetch_callbacks_->start) {
+      url_fetch_callbacks_->start.Run(url_fetcher_.get());
+    }
   } else {
     std::string msg(base::StringPrintf("URL %s rejected by security policy.",
                                        original_url.spec().c_str()));

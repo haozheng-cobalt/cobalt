@@ -89,7 +89,7 @@ bool LogAgent::OnLogMessage(int severity, const char* file, int line,
     params->SetString("entry.source", "other");
     params->SetString("entry.text", str);
     params->SetString("entry.level", GetLogLevelFromSeverity(severity));
-    dispatcher_->SendEvent(event_method_, params);
+    // dispatcher_->SendEvent(event_method_, params);
   }
 
   // Don't suppress the log message.

@@ -29,6 +29,7 @@
 #include "cobalt/debug/backend/debugger_state.h"
 #include "cobalt/debug/backend/dom_agent.h"
 #include "cobalt/debug/backend/log_agent.h"
+#include "cobalt/debug/backend/network_agent.h"
 #include "cobalt/debug/backend/overlay_agent.h"
 #include "cobalt/debug/backend/page_agent.h"
 #include "cobalt/debug/backend/render_overlay.h"
@@ -52,19 +53,14 @@ namespace backend {
 class DebugModule : public script::ScriptDebugger::Delegate {
  public:
   // Construct the debug dispatcher on the current message loop.
-  DebugModule(DebuggerHooksImpl* debugger_hooks,
-              script::GlobalEnvironment* global_environment,
-              RenderOverlay* render_overlay,
-              render_tree::ResourceProvider* resource_provider,
-              dom::Window* window, DebuggerState* debugger_state);
-
-  // Construct the debug dispatcher on the specified message loop.
-  DebugModule(DebuggerHooksImpl* debugger_hooks,
-              script::GlobalEnvironment* global_environment,
-              RenderOverlay* render_overlay,
-              render_tree::ResourceProvider* resource_provider,
-              dom::Window* window, DebuggerState* debugger_state,
-              base::MessageLoop* message_loop);
+  DebugModule(
+      DebuggerHooksImpl* debugger_hooks,
+      script::GlobalEnvironment* global_environment,
+      RenderOverlay* render_overlay,
+      render_tree::ResourceProvider* resource_provider, dom::Window* window,
+      DebuggerState* debugger_state,
+      network::NetworkModule::UrlFetchCallbacks* url_fetch_callbacks = nullptr,
+      base::MessageLoop* message_loop = base::MessageLoop::current());
 
   virtual ~DebugModule();
 
@@ -81,19 +77,21 @@ class DebugModule : public script::ScriptDebugger::Delegate {
   // Data used to construct an instance of this class that does not need to be
   // persisted.
   struct ConstructionData {
-    ConstructionData(DebuggerHooksImpl* debugger_hooks,
-                     script::GlobalEnvironment* global_environment,
-                     base::MessageLoop* message_loop,
-                     RenderOverlay* render_overlay,
-                     render_tree::ResourceProvider* resource_provider,
-                     dom::Window* window, DebuggerState* debugger_state)
+    ConstructionData(
+        DebuggerHooksImpl* debugger_hooks,
+        script::GlobalEnvironment* global_environment,
+        base::MessageLoop* message_loop, RenderOverlay* render_overlay,
+        render_tree::ResourceProvider* resource_provider, dom::Window* window,
+        DebuggerState* debugger_state,
+        network::NetworkModule::UrlFetchCallbacks* url_fetch_callbacks)
         : debugger_hooks(debugger_hooks),
           global_environment(global_environment),
           message_loop(message_loop),
           render_overlay(render_overlay),
           resource_provider(resource_provider),
           window(window),
-          debugger_state(debugger_state) {}
+          debugger_state(debugger_state),
+          url_fetch_callbacks(url_fetch_callbacks) {}
 
     DebuggerHooksImpl* debugger_hooks;
     script::GlobalEnvironment* global_environment;
@@ -102,11 +100,8 @@ class DebugModule : public script::ScriptDebugger::Delegate {
     render_tree::ResourceProvider* resource_provider;
     dom::Window* window;
     DebuggerState* debugger_state;
+    network::NetworkModule::UrlFetchCallbacks* url_fetch_callbacks;
   };
-
-  // Builds |debug_dispatcher_| on |message_loop_| by calling |BuildInternal|,
-  // posting the task and waiting for it if necessary.
-  void Build(const ConstructionData& data);
 
   // Signals |created| when done, if not NULL.
   void BuildInternal(const ConstructionData& data);
@@ -139,6 +134,7 @@ class DebugModule : public script::ScriptDebugger::Delegate {
   std::unique_ptr<LogAgent> log_agent_;
   std::unique_ptr<DOMAgent> dom_agent_;
   scoped_refptr<CSSAgent> css_agent_;
+  std::unique_ptr<NetworkAgent> network_agent_;
   std::unique_ptr<OverlayAgent> overlay_agent_;
   std::unique_ptr<PageAgent> page_agent_;
   std::unique_ptr<ScriptDebuggerAgent> script_debugger_agent_;
