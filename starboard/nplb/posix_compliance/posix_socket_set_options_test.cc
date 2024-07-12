@@ -108,6 +108,19 @@ TEST_P(PosixSocketSetOptionsTest, RainyDayInvalidSocket) {
       -1);
 }
 
+TEST_P(PosixSocketSetOptionsTest, SetSocketOptions) {
+  // https://source.corp.google.com/piper///depot/google3/video/youtube/tvfilm/unplugged/linear/umc/multicast_packet_sender_test.cc;l=104?q=setsockopt%20IP_ADD_MEMBERSHIP%20test%20&start=11
+  int socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  ip_mreq multicast_req;
+  multicast_req.imr_multiaddr = multicast_ip_addr.ipv4_address();
+  multicast_req.imr_interface = net_base::IPAddress::Any4().ipv4_address();
+  CHECK_NE(setsockopt(recv_sock_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+                      &multicast_req, sizeof(multicast_req)),
+           -1);
+
+  close(socket_fd);
+}
+
 #if SB_HAS(IPV6)
 INSTANTIATE_TEST_SUITE_P(PosixSocketAddressTypes,
                          PosixSocketSetOptionsTest,
