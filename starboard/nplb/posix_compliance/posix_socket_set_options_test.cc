@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <arpa/inet.h>
+
 #include "starboard/configuration.h"
 #include "starboard/nplb/posix_compliance/posix_socket_helpers.h"
 
@@ -109,14 +111,13 @@ TEST_P(PosixSocketSetOptionsTest, RainyDayInvalidSocket) {
 }
 
 TEST_P(PosixSocketSetOptionsTest, SetSocketOptions) {
-  // https://source.corp.google.com/piper///depot/google3/video/youtube/tvfilm/unplugged/linear/umc/multicast_packet_sender_test.cc;l=104?q=setsockopt%20IP_ADD_MEMBERSHIP%20test%20&start=11
   int socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  ip_mreq multicast_req;
-  multicast_req.imr_multiaddr = multicast_ip_addr.ipv4_address();
-  multicast_req.imr_interface = net_base::IPAddress::Any4().ipv4_address();
-  CHECK_NE(setsockopt(recv_sock_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-                      &multicast_req, sizeof(multicast_req)),
-           -1);
+  struct ip_mreq imreq = {0};
+  imreq.imr_multiaddr.s_addr = inet_addr("224.0.0.1");
+  imreq.imr_interface.s_addr = INADDR_ANY;
+  EXPECT_EQ(setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &imreq,
+                       sizeof(imreq)),
+            0);
 
   close(socket_fd);
 }
