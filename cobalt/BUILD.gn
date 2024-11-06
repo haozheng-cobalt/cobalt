@@ -60,3 +60,30 @@ if (!is_android) {
     configs += [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
   }
 }
+
+static_library("common") {
+  sources = [
+    "user_agent_platform_info.cc",
+    "user_agent_platform_info.h",
+    "user_agent_string.cc",
+    "user_agent_string.h",
+  ]
+
+  deps = [
+    "//base",
+    "//starboard($starboard_toolchain)",
+    "//starboard/common",
+  ]
+}
+
+target(gtest_target_type, "cobalt_test") {
+  testonly = true
+
+  sources = [ "user_agent_string_test.cc" ]
+
+  deps = [
+    ":common",
+    "//testing/gmock",
+    "//testing/gtest",
+  ]
+}
