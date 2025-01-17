@@ -71,6 +71,9 @@ class StarboardBridge {
 
   std::string GetCacheAbsolutePath(JNIEnv* env);
 
+  // return type?
+  base::android::ScopedJavaLocalRef<jobject> GetTextToSpeechHelper(JNIEnv* env);
+
  private:
   StarboardBridge() = default;
   ~StarboardBridge() = default;
