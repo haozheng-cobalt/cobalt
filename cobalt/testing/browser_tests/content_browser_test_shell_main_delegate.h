@@ -18,7 +18,7 @@
 #include <memory>
 
 #include "build/chromeos_buildflags.h"
-#include "cobalt/shell/app/shell_main_delegate.h"
+#include "cobalt/testing/browser_tests/app/shell_main_test_delegate.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 
 #if BUILDFLAG(IS_CHROMEOS_LACROS)

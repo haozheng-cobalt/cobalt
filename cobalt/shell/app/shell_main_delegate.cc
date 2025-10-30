@@ -58,7 +58,7 @@
 #define IPC_MESSAGE_MACROS_LOG_ENABLED
 #include "content/public/common/content_ipc_logging.h"
 #define IPC_LOG_TABLE_ADD_ENTRY(msg_id, logger) \
-    content::RegisterIPCLogger(msg_id, logger)
+  content::RegisterIPCLogger(msg_id, logger)
 #endif
 
 #if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_STARBOARD)
@@ -89,11 +89,6 @@
 #if BUILDFLAG(IS_IOS)
 #include "cobalt/shell/app/ios/shell_application_ios.h"
 #endif
-
-#if defined(RUN_BROWSER_TESTS)
-#include "cobalt/shell/common/shell_test_switches.h"            // nogncheck
-#include "cobalt/shell/utility/shell_content_utility_client.h"  // nogncheck
-#endif  // defined(RUN_BROWSER_TESTS)
 
 namespace {
 
@@ -190,21 +185,10 @@ namespace content {
 ShellMainDelegate::ShellMainDelegate(bool is_content_browsertests)
     : is_content_browsertests_(is_content_browsertests) {}
 
-ShellMainDelegate::~ShellMainDelegate() {
-}
+ShellMainDelegate::~ShellMainDelegate() {}
 
 std::optional<int> ShellMainDelegate::BasicStartupComplete() {
   base::CommandLine& command_line = *base::CommandLine::ForCurrentProcess();
-
-#if defined(RUN_BROWSER_TESTS)
-  if (command_line.HasSwitch("run-layout-test")) {
-    std::cerr << std::string(79, '*') << "\n"
-              << "* The flag --run-layout-test is obsolete. Please use --"
-              << switches::kRunWebTests << " instead. *\n"
-              << std::string(79, '*') << "\n";
-    command_line.AppendSwitch(switches::kRunWebTests);
-  }
-#endif  // defined(RUN_BROWSER_TESTS)
 
 #if BUILDFLAG(IS_ANDROID)
   Compositor::Initialize();
@@ -269,8 +253,9 @@ std::variant<int, MainFunctionParams> ShellMainDelegate::RunProcess(
     const std::string& process_type,
     MainFunctionParams main_function_params) {
   // For non-browser process, return and have the caller run the main loop.
-  if (!process_type.empty())
+  if (!process_type.empty()) {
     return std::move(main_function_params);
+  }
 
   base::CurrentProcess::GetInstance().SetProcessType(
       base::CurrentProcessType::PROCESS_BROWSER);
@@ -375,8 +360,9 @@ void ShellMainDelegate::InitializeResourceBundle() {
 
 std::optional<int> ShellMainDelegate::PreBrowserMain() {
   std::optional<int> exit_code = content::ContentMainDelegate::PreBrowserMain();
-  if (exit_code.has_value())
+  if (exit_code.has_value()) {
     return exit_code;
+  }
 
   return std::nullopt;
 }
@@ -447,12 +433,5 @@ ContentRendererClient* ShellMainDelegate::CreateContentRendererClient() {
   renderer_client_ = std::make_unique<ShellContentRendererClient>();
   return renderer_client_.get();
 }
-#if defined(RUN_BROWSER_TESTS)
-ContentUtilityClient* ShellMainDelegate::CreateContentUtilityClient() {
-  utility_client_ =
-      std::make_unique<ShellContentUtilityClient>(is_content_browsertests_);
-  return utility_client_.get();
-}
-#endif  // defined(RUN_BROWSER_TESTS)
 
 }  // namespace content
