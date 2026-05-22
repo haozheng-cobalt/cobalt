@@ -232,7 +232,7 @@ Based on technical challenges faced during past surgical removals, future remova
 
 ### Rule 2: Gate DevTools Auto-Attachers & Observers
 * **Problem**: Auto-attachers or observers (such as `FrameAutoAttacher`) often inherit from tracker classes in the excluded feature directories, causing compilation to crash because the base classes are missing.
-* **Instruction**: Always check if the feature defines a manager, observer, or tracker inside the DevTools directory. Gird both the class inheritance (multiple inheritance blocks), declarations, and corresponding implementation callbacks (e.g. `AuctionWorkletCreated`) inside preprocessor gates.
+* **Instruction**: Always check if the feature defines a manager, observer, or tracker inside the DevTools directory. Guard both the class inheritance (multiple inheritance blocks), declarations, and corresponding implementation callbacks (e.g. `AuctionWorkletCreated`) inside preprocessor gates.
 
 ### Rule 3: Sever Mojo Exposed Binders
 * **Problem**: Renderer processes expose Mojo services to the browser at startup. If the service implementation is excluded, the exposed binder list will cause unresolved symbol linker errors.
